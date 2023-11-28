@@ -92,6 +92,7 @@ public class SellerDaoJDBC implements SellerDao {
 
 	// método auxiliar para instanciar departament
 	private Department instantiateDepartment(ResultSet rs) throws SQLException {
+
 		// TODO Auto-generated method stub
 		Department dep = new Department();
 		dep.setId(rs.getInt("DepartmentId")); // colocando o valor no objeto através da table
@@ -99,14 +100,51 @@ public class SellerDaoJDBC implements SellerDao {
 		return dep;
 	}
 
+	// método para buscar todos
 	@Override
 	public List<Seller> findAll() {
 		// TODO Auto-generated method stub
-		return null;
+		PreparedStatement st = null;
+		ResultSet rs = null;
+
+		try {
+			st = conn.prepareStatement(
+					"SELECT seller.*,department.Name as DepName " + "FROM seller INNER JOIN department "
+							+ "ON seller.DepartmentId = department.Id " + "ORDER BY Name");
+
+			rs = st.executeQuery();
+
+			List<Seller> list = new ArrayList<>();
+			Map<Integer, Department> map = new HashMap<>();
+
+			while (rs.next()) {
+				// se o dep já existir eu vou reaproveitar ele
+				Department dep = map.get(rs.getInt("DepartmentId")); // testando se o departamento já existe, para não
+																		// instanciar novamente
+
+				if (dep == null) { // se o departamento não existir ele vai adicionar no map
+					dep = instantiateDepartment(rs); // instanciando o Department
+					map.put(rs.getInt("DepartmentId"), dep); // salvando o Department no map
+				}
+
+				Seller obj = instantiateSeller(rs, dep);
+				list.add(obj);
+				// o resultado vai ser um único departamento criado e vários vendedores que
+				// seria o correto
+				// varios vendedores e vários departamentos é a forma incorreta
+			}
+			return list;
+
+		} catch (SQLException e) {
+			throw new DbException(e.getMessage());
+
+		} finally {
+			DB.closeStatement(st);
+			DB.closeResultSet(rs);
+		}
 	}
 
 	// método para buscar por department
-
 	@Override
 	public List<Seller> findByDepartment(Department department) {
 		// TODO Auto-generated method stub
@@ -118,29 +156,31 @@ public class SellerDaoJDBC implements SellerDao {
 			st = conn.prepareStatement(
 					"SELECT seller.*,department.Name as DepName " + "FROM seller INNER JOIN department "
 							+ "ON seller.DepartmentId = department.Id " + "WHERE DepartmentId = ? " + "ORDER BY Name");
-			
+
 			st.setInt(1, department.getId());
 			rs = st.executeQuery();
-			
+
 			List<Seller> list = new ArrayList<>();
 			Map<Integer, Department> map = new HashMap<>();
-			
-			while(rs.next()) {
-				
-				Department dep = map.get(rs.getInt("DepartmentId")); // testando se o departamento já existe, para não instanciar novamente
-				
-				if (dep == null) { // se o departamento não existir ele vai adicionar no map 
+
+			while (rs.next()) {
+
+				Department dep = map.get(rs.getInt("DepartmentId")); // testando se o departamento já existe, para não
+																		// instanciar novamente
+
+				if (dep == null) { // se o departamento não existir ele vai adicionar no map
 					dep = instantiateDepartment(rs); // instanciando o Department
 					map.put(rs.getInt("DepartmentId"), dep); // salvando o Department no map
 				}
-				
+
 				Seller obj = instantiateSeller(rs, dep);
 				list.add(obj);
-				// o resultado vai ser um único departamento criado e vários vendedores que seria o correto
+				// o resultado vai ser um único departamento criado e vários vendedores que
+				// seria o correto
 				// varios vendedores e vários departamentos é a forma incorreta
 			}
 			return list;
-			
+
 		} catch (SQLException e) {
 			throw new DbException(e.getMessage());
 
